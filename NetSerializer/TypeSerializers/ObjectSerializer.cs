@@ -9,49 +9,44 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
-namespace NetSerializer
+namespace NetSerializer.TypeSerializers
 {
-	sealed class ObjectSerializer : IStaticTypeSerializer
+	internal sealed class ObjectSerializer : IStaticTypeSerializer
 	{
-		public bool Handles(Type type)
+		public bool Handles(TypeInfo type)
 		{
-			return type == typeof(object);
+			return type.AsType() == typeof(object);
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
 			return new Type[0];
 		}
 
-		public MethodInfo GetStaticWriter(Type type)
+		public MethodInfo GetStaticWriter(TypeInfo type)
 		{
-			return typeof(ObjectSerializer).GetMethod("Serialize", BindingFlags.Static | BindingFlags.Public);
+			return typeof(ObjectSerializer).GetTypeInfo().GetDeclaredMethod("Serialize");
 		}
 
-		public MethodInfo GetStaticReader(Type type)
+		public MethodInfo GetStaticReader(TypeInfo type)
 		{
-			return typeof(ObjectSerializer).GetMethod("Deserialize", BindingFlags.Static | BindingFlags.Public);
+			return typeof(ObjectSerializer).GetTypeInfo().GetDeclaredMethod("Deserialize");
 		}
 
 		public static void Serialize(Serializer serializer, Stream stream, object ob)
 		{
 			if (ob == null)
 			{
-				Primitives.WritePrimitive(stream, (uint)0);
+				Primitives.WritePrimitive(stream, (uint) 0);
 				return;
 			}
 
 			var type = ob.GetType();
-
-			SerializeDelegate<object> del;
-
-			uint id = serializer.GetTypeIdAndSerializer(type, out del);
+			var id = serializer.GetTypeIdAndSerializer(type.GetTypeInfo(), out SerializeDelegate<object> del);
 
 			Primitives.WritePrimitive(stream, id);
-
 			if (id == Serializer.ObjectTypeId)
 				return;
 
@@ -60,9 +55,7 @@ namespace NetSerializer
 
 		public static void Deserialize(Serializer serializer, Stream stream, out object ob)
 		{
-			uint id;
-
-			Primitives.ReadPrimitive(stream, out id);
+			Primitives.ReadPrimitive(stream, out uint id);
 
 			if (id == 0)
 			{

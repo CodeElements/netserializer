@@ -8,23 +8,24 @@
 
 using System;
 using System.Reflection;
-using System.Reflection.Emit;
 
 namespace NetSerializer
 {
-	sealed class TypeData
+	internal sealed class TypeData
 	{
-		public TypeData(Type type, uint typeID, ITypeSerializer typeSerializer)
+		public TypeData(TypeInfo typeInfo, Type type, uint typeId, ITypeSerializer typeSerializer)
 		{
-			this.Type = type;
-			this.TypeID = typeID;
-			this.TypeSerializer = typeSerializer;
+			TypeInfo = typeInfo;
+			Type = type;
+			TypeId = typeId;
+			TypeSerializer = typeSerializer;
 		}
 
-		public Type Type { get; private set; }
-		public uint TypeID { get; private set; }
+		public TypeInfo TypeInfo { get; }
+		public Type Type { get; }
+		public uint TypeId { get; }
 
-		public ITypeSerializer TypeSerializer { get; private set; }
+		public ITypeSerializer TypeSerializer { get; }
 
 		public MethodInfo WriterMethodInfo;
 		public MethodInfo ReaderMethodInfo;
@@ -43,7 +44,7 @@ namespace NetSerializer
 				if (this.WriterMethodInfo is MethodBuilder)
 					return this.WriterNeedsInstanceDebug;
 #endif
-				return this.WriterMethodInfo.GetParameters().Length == 3;
+				return WriterMethodInfo.GetParameters().Length == 3;
 			}
 		}
 
@@ -55,7 +56,7 @@ namespace NetSerializer
 				if (this.ReaderMethodInfo is MethodBuilder)
 					return this.ReaderNeedsInstanceDebug;
 #endif
-				return this.ReaderMethodInfo.GetParameters().Length == 3;
+				return ReaderMethodInfo.GetParameters().Length == 3;
 			}
 		}
 
@@ -75,12 +76,12 @@ namespace NetSerializer
 				// - Sealed types with static (De)serializer method, as the method will handle null
 				// Other types go through the ObjectSerializer
 
-				var type = this.Type;
+				var type = TypeInfo;
 
 				if (type.IsValueType || type.IsArray)
 					return true;
 
-				if (type.IsSealed && (this.TypeSerializer is IStaticTypeSerializer))
+				if (type.IsSealed && (TypeSerializer is IStaticTypeSerializer))
 					return true;
 
 				return false;

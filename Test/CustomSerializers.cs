@@ -10,24 +10,24 @@ namespace Test
 {
 	class TriDimArrayCustomSerializer : IStaticTypeSerializer
 	{
-		public bool Handles(Type type)
+		public bool Handles(TypeInfo type)
 		{
 			return type == typeof(int[,,]);
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
 			yield break;
 		}
 
-		public MethodInfo GetStaticWriter(Type type)
+		public MethodInfo GetStaticWriter(TypeInfo type)
 		{
 			return typeof(TriDimArrayCustomSerializer).GetMethod("WritePrimitive",
 				BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.ExactBinding, null,
 				new Type[] { typeof(Stream), type }, null);
 		}
 
-		public MethodInfo GetStaticReader(Type type)
+		public MethodInfo GetStaticReader(TypeInfo type)
 		{
 			return typeof(TriDimArrayCustomSerializer).GetMethod("ReadPrimitive",
 				BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.ExactBinding, null,

@@ -16,39 +16,39 @@ namespace NetSerializer
 	public interface ITypeSerializer
 	{
 		/// <summary>
-		/// Returns if this TypeSerializer handles the given type
+		///     Returns if this TypeSerializer handles the given type
 		/// </summary>
-		bool Handles(Type type);
+		bool Handles(TypeInfo type);
 
 		/// <summary>
-		/// Return types that are needed to serialize the given type
+		///     Return types that are needed to serialize the given type
 		/// </summary>
-		IEnumerable<Type> GetSubtypes(Type type);
+		IEnumerable<Type> GetSubtypes(TypeInfo type);
 	}
 
 	public interface IStaticTypeSerializer : ITypeSerializer
 	{
 		/// <summary>
-		/// Get static method used to serialize the given type
+		///     Get static method used to serialize the given type
 		/// </summary>
-		MethodInfo GetStaticWriter(Type type);
+		MethodInfo GetStaticWriter(TypeInfo type);
 
 		/// <summary>
-		/// Get static method used to deserialize the given type
+		///     Get static method used to deserialize the given type
 		/// </summary>
-		MethodInfo GetStaticReader(Type type);
+		MethodInfo GetStaticReader(TypeInfo type);
 	}
 
 	public interface IDynamicTypeSerializer : ITypeSerializer
 	{
 		/// <summary>
-		/// Generate code to serialize the given type
+		///     Generate code to serialize the given type
 		/// </summary>
-		void GenerateWriterMethod(Serializer serializer, Type type, ILGenerator il);
+		void GenerateWriterMethod(Serializer serializer, TypeInfo type, ILGenerator il);
 
 		/// <summary>
-		/// Generate code to deserialize the given type
+		///     Generate code to deserialize the given type
 		/// </summary>
-		void GenerateReaderMethod(Serializer serializer, Type type, ILGenerator il);
+		void GenerateReaderMethod(Serializer serializer, TypeInfo type, ILGenerator il);
 	}
 }

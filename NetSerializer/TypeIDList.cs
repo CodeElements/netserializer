@@ -9,59 +9,53 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 
 namespace NetSerializer
 {
 	/// <summary>
-	/// Threadsafe TypeID -> TypeData list, which supports lockless reading.
+	///     Threadsafe TypeID -> TypeData list, which supports lockless reading.
 	/// </summary>
-	class TypeIDList
+	internal class TypeIdList
 	{
-		TypeData[] m_array;
-		object m_writeLock = new object();
+		private const int InitialLength = 256;
+		private TypeData[] _array;
+		private readonly object _writeLock = new object();
 
-		const int InitialLength = 256;
-
-		public TypeIDList()
+		public TypeIdList()
 		{
-			m_array = new TypeData[InitialLength];
-		}
-
-		public bool ContainsTypeID(uint typeID)
-		{
-			return typeID < m_array.Length && m_array[typeID] != null;
+			_array = new TypeData[InitialLength];
 		}
 
 		public TypeData this[uint idx]
 		{
-			get
-			{
-				return m_array[idx];
-			}
+			get => _array[idx];
 
 			set
 			{
-				lock (m_writeLock)
+				lock (_writeLock)
 				{
-					Debug.Assert(value.TypeID == idx);
+					Debug.Assert(value.TypeId == idx);
 
-					if (idx >= m_array.Length)
+					if (idx >= _array.Length)
 					{
 						var newArray = new TypeData[NextPowOf2(idx + 1)];
-						Array.Copy(m_array, newArray, m_array.Length);
-						m_array = newArray;
+						Array.Copy(_array, newArray, _array.Length);
+						_array = newArray;
 					}
 
-					Debug.Assert(m_array[idx] == null);
+					Debug.Assert(_array[idx] == null);
 
-					m_array[idx] = value;
+					_array[idx] = value;
 				}
 			}
 		}
 
-		uint NextPowOf2(uint v)
+		public bool ContainsTypeId(uint typeId)
+		{
+			return typeId < _array.Length && _array[typeId] != null;
+		}
+
+		private uint NextPowOf2(uint v)
 		{
 			v--;
 			v |= v >> 1;
@@ -77,11 +71,11 @@ namespace NetSerializer
 		{
 			var list = new SortedList<uint, Type>();
 
-			lock (m_writeLock)
+			lock (_writeLock)
 			{
-				for (uint i = 0; i < m_array.Length; ++i)
+				for (uint i = 0; i < _array.Length; ++i)
 				{
-					var td = m_array[i];
+					var td = _array[i];
 
 					if (td == null)
 						continue;

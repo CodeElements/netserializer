@@ -9,47 +9,47 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Linq;
+using System.Reflection;
 
-namespace NetSerializer
+namespace NetSerializer.TypeSerializers
 {
 	/// <summary>
-	/// A "no-op" TypeSerializer which can be used to make the NetSerializer ignore fields of certain type.
-	/// For example, Delegates cannot be serializer by default, and NoOpSerializer could be used to ignore all subclasses of Delegate
+	///     A "no-op" TypeSerializer which can be used to make the NetSerializer ignore fields of certain type.
+	///     For example, Delegates cannot be serializer by default, and NoOpSerializer could be used to ignore all subclasses
+	///     of Delegate
 	/// </summary>
-	sealed class NoOpSerializer : IStaticTypeSerializer
+	internal sealed class NoOpSerializer : IStaticTypeSerializer
 	{
-		Type[] m_types;
-		bool m_handleSubclasses;
+		private readonly bool _handleSubclasses;
+		private readonly TypeInfo[] _types;
 
-		public NoOpSerializer(IEnumerable<Type> types, bool handleSubclasses)
+		public NoOpSerializer(IEnumerable<TypeInfo> types, bool handleSubclasses)
 		{
-			m_types = types.ToArray();
-			m_handleSubclasses = handleSubclasses;
+			_types = types.ToArray();
+			_handleSubclasses = handleSubclasses;
 		}
 
-		public bool Handles(Type type)
+		public bool Handles(TypeInfo type)
 		{
-			if (m_handleSubclasses)
-				return m_types.Any(t => type.IsSubclassOf(t));
-			else
-				return m_types.Contains(type);
+			if (_handleSubclasses)
+				return _types.Any(x => type.IsSubclassOf(x.AsType()));
+			return _types.Contains(type);
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
 			return new Type[0];
 		}
 
-		public MethodInfo GetStaticWriter(Type type)
+		public MethodInfo GetStaticWriter(TypeInfo type)
 		{
-			return this.GetType().GetMethod("Serialize", BindingFlags.Static | BindingFlags.Public);
+			return GetType().GetTypeInfo().GetDeclaredMethod("Serialize");
 		}
 
-		public MethodInfo GetStaticReader(Type type)
+		public MethodInfo GetStaticReader(TypeInfo type)
 		{
-			return this.GetType().GetMethod("Deserialize", BindingFlags.Static | BindingFlags.Public);
+			return GetType().GetTypeInfo().GetDeclaredMethod("Deserialize");
 		}
 
 		public static void Serialize(Serializer serializer, Stream stream, object ob)

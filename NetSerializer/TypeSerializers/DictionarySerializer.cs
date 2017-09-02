@@ -12,13 +12,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
-namespace NetSerializer
+namespace NetSerializer.TypeSerializers
 {
-	sealed class DictionarySerializer : IStaticTypeSerializer
+	internal sealed class DictionarySerializer : IStaticTypeSerializer
 	{
-		public bool Handles(Type type)
+		public bool Handles(TypeInfo type)
 		{
 			if (!type.IsGenericType)
 				return false;
@@ -28,18 +27,18 @@ namespace NetSerializer
 			return genTypeDef == typeof(Dictionary<,>);
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
 			// Dictionary<K,V> is stored as KeyValuePair<K,V>[]
 
-			var genArgs = type.GetGenericArguments();
+			var genArgs = type.GenericTypeArguments;
 
 			var serializedType = typeof(KeyValuePair<,>).MakeGenericType(genArgs).MakeArrayType();
 
-			return new[] { serializedType };
+			return new[] {serializedType};
 		}
 
-		public MethodInfo GetStaticWriter(Type type)
+		public MethodInfo GetStaticWriter(TypeInfo type)
 		{
 			Debug.Assert(type.IsGenericType);
 
@@ -50,18 +49,18 @@ namespace NetSerializer
 
 			Debug.Assert(genTypeDef == typeof(Dictionary<,>));
 
-			var containerType = this.GetType();
+			var containerType = GetType().GetTypeInfo();
 
 			var writer = GetGenWriter(containerType, genTypeDef);
 
-			var genArgs = type.GetGenericArguments();
+			var genArgs = type.GenericTypeArguments;
 
 			writer = writer.MakeGenericMethod(genArgs);
 
 			return writer;
 		}
 
-		public MethodInfo GetStaticReader(Type type)
+		public MethodInfo GetStaticReader(TypeInfo type)
 		{
 			Debug.Assert(type.IsGenericType);
 
@@ -72,22 +71,20 @@ namespace NetSerializer
 
 			Debug.Assert(genTypeDef == typeof(Dictionary<,>));
 
-			var containerType = this.GetType();
+			var containerType = GetType().GetTypeInfo();
 
 			var reader = GetGenReader(containerType, genTypeDef);
 
-			var genArgs = type.GetGenericArguments();
+			var genArgs = type.GenericTypeArguments;
 
 			reader = reader.MakeGenericMethod(genArgs);
 
 			return reader;
 		}
 
-		static MethodInfo GetGenWriter(Type containerType, Type genType)
+		private static MethodInfo GetGenWriter(TypeInfo containerType, Type genType)
 		{
-			var mis = containerType.GetMethods(BindingFlags.Static | BindingFlags.Public)
-				.Where(mi => mi.IsGenericMethod && mi.Name == "WritePrimitive");
-
+			var mis = containerType.GetDeclaredMethods("WritePrimitive");
 			foreach (var mi in mis)
 			{
 				var p = mi.GetParameters();
@@ -100,7 +97,7 @@ namespace NetSerializer
 
 				var paramType = p[2].ParameterType;
 
-				if (paramType.IsGenericType == false)
+				if (paramType.GetTypeInfo().IsGenericType == false)
 					continue;
 
 				var genParamType = paramType.GetGenericTypeDefinition();
@@ -112,11 +109,9 @@ namespace NetSerializer
 			return null;
 		}
 
-		static MethodInfo GetGenReader(Type containerType, Type genType)
+		private static MethodInfo GetGenReader(TypeInfo containerType, Type genType)
 		{
-			var mis = containerType.GetMethods(BindingFlags.Static | BindingFlags.Public)
-				.Where(mi => mi.IsGenericMethod && mi.Name == "ReadPrimitive");
-
+			var mis = containerType.DeclaredMethods.Where(x => x.IsGenericMethod && x.Name == "ReadPrimitive");
 			foreach (var mi in mis)
 			{
 				var p = mi.GetParameters();
@@ -134,7 +129,7 @@ namespace NetSerializer
 
 				paramType = paramType.GetElementType();
 
-				if (paramType.IsGenericType == false)
+				if (paramType.GetTypeInfo().IsGenericType == false)
 					continue;
 
 				var genParamType = paramType.GetGenericTypeDefinition();
@@ -150,16 +145,17 @@ namespace NetSerializer
 		{
 			var kvpArray = new KeyValuePair<TKey, TValue>[value.Count];
 
-			int i = 0;
+			var i = 0;
 			foreach (var kvp in value)
 				kvpArray[i++] = kvp;
 
 			serializer.Serialize(stream, kvpArray);
 		}
 
-		public static void ReadPrimitive<TKey, TValue>(Serializer serializer, Stream stream, out Dictionary<TKey, TValue> value)
+		public static void ReadPrimitive<TKey, TValue>(Serializer serializer, Stream stream,
+			out Dictionary<TKey, TValue> value)
 		{
-			var kvpArray = (KeyValuePair<TKey, TValue>[])serializer.Deserialize(stream);
+			var kvpArray = (KeyValuePair<TKey, TValue>[]) serializer.Deserialize(stream);
 
 			value = new Dictionary<TKey, TValue>(kvpArray.Length);
 

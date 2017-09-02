@@ -8,52 +8,51 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
-namespace NetSerializer
+namespace NetSerializer.TypeSerializers
 {
-	sealed class PrimitivesSerializer : IStaticTypeSerializer
+	internal sealed class PrimitivesSerializer : IStaticTypeSerializer
 	{
-		static Type[] s_primitives = new Type[] {
-				typeof(bool),
-				typeof(byte), typeof(sbyte),
-				typeof(char),
-				typeof(ushort), typeof(short),
-				typeof(uint), typeof(int),
-				typeof(ulong), typeof(long),
-				typeof(float), typeof(double),
-				typeof(string),
-				typeof(DateTime),
-				typeof(byte[]),
-				typeof(Decimal),
-			};
-
-		public bool Handles(Type type)
+		private static readonly Type[] Primitives =
 		{
-			return s_primitives.Contains(type);
+			typeof(bool),
+			typeof(byte), typeof(sbyte),
+			typeof(char),
+			typeof(ushort), typeof(short),
+			typeof(uint), typeof(int),
+			typeof(ulong), typeof(long),
+			typeof(float), typeof(double),
+			typeof(string),
+			typeof(DateTime),
+			typeof(byte[]),
+			typeof(decimal)
+		};
+
+		public bool Handles(TypeInfo type)
+		{
+			return Primitives.Contains(type.AsType());
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
 			return new Type[0];
 		}
 
-		public MethodInfo GetStaticWriter(Type type)
+		public MethodInfo GetStaticWriter(TypeInfo type)
 		{
-			return Primitives.GetWritePrimitive(type);
+			return NetSerializer.Primitives.GetWritePrimitive(type.AsType());
 		}
 
-		public MethodInfo GetStaticReader(Type type)
+		public MethodInfo GetStaticReader(TypeInfo type)
 		{
-			return Primitives.GetReaderPrimitive(type);
+			return NetSerializer.Primitives.GetReaderPrimitive(type.AsType());
 		}
 
 		public static IEnumerable<Type> GetSupportedTypes()
 		{
-			return s_primitives;
+			return Primitives;
 		}
 	}
 }

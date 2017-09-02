@@ -8,32 +8,30 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 
-namespace NetSerializer
+namespace NetSerializer.TypeSerializers
 {
-	sealed class ArraySerializer : IDynamicTypeSerializer
+	internal sealed class ArraySerializer : IDynamicTypeSerializer
 	{
-		public bool Handles(Type type)
+		public bool Handles(TypeInfo type)
 		{
 			if (!type.IsArray)
 				return false;
 
 			if (type.GetArrayRank() != 1)
-				throw new NotSupportedException(String.Format("Multi-dim arrays not supported: {0}", type.FullName));
+				throw new NotSupportedException(string.Format("Multi-dim arrays not supported: {0}", type.FullName));
 
 			return true;
 		}
 
-		public IEnumerable<Type> GetSubtypes(Type type)
+		public IEnumerable<Type> GetSubtypes(TypeInfo type)
 		{
-			return new[] { typeof(uint), type.GetElementType() };
+			return new[] {typeof(uint), type.GetElementType()};
 		}
 
-		public void GenerateWriterMethod(Serializer serializer, Type type, ILGenerator il)
+		public void GenerateWriterMethod(Serializer serializer, TypeInfo type, ILGenerator il)
 		{
 			var elemType = type.GetElementType();
 
@@ -105,7 +103,7 @@ namespace NetSerializer
 			il.Emit(OpCodes.Ret);
 		}
 
-		public void GenerateReaderMethod(Serializer serializer, Type type, ILGenerator il)
+		public void GenerateReaderMethod(Serializer serializer, TypeInfo type, ILGenerator il)
 		{
 			var elemType = type.GetElementType();
 
@@ -129,7 +127,7 @@ namespace NetSerializer
 
 			il.MarkLabel(notNullLabel);
 
-			var arrLocal = il.DeclareLocal(type);
+			var arrLocal = il.DeclareLocal(type.AsType());
 
 			// create new array with len - 1
 			il.Emit(OpCodes.Ldloc_S, lenLocal);

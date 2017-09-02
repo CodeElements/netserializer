@@ -13,40 +13,30 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Text;
 
 namespace NetSerializer
 {
-	static class Helpers
+	internal static class Helpers
 	{
-		public static IEnumerable<FieldInfo> GetFieldInfos(Type type)
+		public static IEnumerable<FieldInfo> GetFieldInfos(TypeInfo type)
 		{
 			Debug.Assert(type.IsSerializable);
 
-			var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+			var fields = type.DeclaredFields
 				.Where(fi => (fi.Attributes & FieldAttributes.NotSerialized) == 0)
 				.OrderBy(f => f.Name, StringComparer.Ordinal);
 
 			if (type.BaseType == null)
-			{
 				return fields;
-			}
-			else
-			{
-				var baseFields = GetFieldInfos(type.BaseType);
-				return baseFields.Concat(fields);
-			}
+			var baseFields = GetFieldInfos(type.BaseType.GetTypeInfo());
+			return baseFields.Concat(fields);
 		}
 
 		public static DynamicMethod GenerateDynamicSerializerStub(Type type)
 		{
 			var dm = new DynamicMethod("Serialize", null,
-				new Type[] { typeof(Serializer), typeof(Stream), type },
+				new[] {typeof(Serializer), typeof(Stream), type},
 				typeof(Serializer), true);
-
-			dm.DefineParameter(1, ParameterAttributes.None, "serializer");
-			dm.DefineParameter(2, ParameterAttributes.None, "stream");
-			dm.DefineParameter(3, ParameterAttributes.None, "value");
 
 			return dm;
 		}
@@ -54,11 +44,8 @@ namespace NetSerializer
 		public static DynamicMethod GenerateDynamicDeserializerStub(Type type)
 		{
 			var dm = new DynamicMethod("Deserialize", null,
-				new Type[] { typeof(Serializer), typeof(Stream), type.MakeByRefType() },
+				new[] {typeof(Serializer), typeof(Stream), type.MakeByRefType()},
 				typeof(Serializer), true);
-			dm.DefineParameter(1, ParameterAttributes.None, "serializer");
-			dm.DefineParameter(2, ParameterAttributes.None, "stream");
-			dm.DefineParameter(3, ParameterAttributes.Out, "value");
 
 			return dm;
 		}
@@ -86,17 +73,18 @@ namespace NetSerializer
 #endif
 
 		/// <summary>
-		/// Create delegate that calls writer either directly, or via a trampoline
+		///     Create delegate that calls writer either directly, or via a trampoline
 		/// </summary>
 		public static Delegate CreateSerializeDelegate(Type paramType, TypeData data)
 		{
-			Type writerType = data.Type;
+			var writerType = data.Type;
+			var writerTypeInfo = data.TypeInfo;
 
 			if (paramType != writerType && paramType != typeof(object))
 				throw new Exception();
 
-			bool needTypeConv = paramType != writerType;
-			bool needsInstanceParameter = data.WriterNeedsInstance;
+			var needTypeConv = paramType != writerType;
+			var needsInstanceParameter = data.WriterNeedsInstance;
 
 			var delegateType = typeof(SerializeDelegate<>).MakeGenericType(paramType);
 
@@ -108,13 +96,12 @@ namespace NetSerializer
 
 				if (dynamicWriter != null)
 					return dynamicWriter.CreateDelegate(delegateType);
-				else
-					return Delegate.CreateDelegate(delegateType, data.WriterMethodInfo);
+				return data.WriterMethodInfo.CreateDelegate(delegateType);
 			}
 
 			// Create a trampoline
 
-			var wrapper = Helpers.GenerateDynamicSerializerStub(paramType);
+			var wrapper = GenerateDynamicSerializerStub(paramType);
 			var il = wrapper.GetILGenerator();
 
 			if (needsInstanceParameter)
@@ -123,7 +110,7 @@ namespace NetSerializer
 			il.Emit(OpCodes.Ldarg_1);
 			il.Emit(OpCodes.Ldarg_2);
 			if (needTypeConv)
-				il.Emit(writerType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, writerType);
+				il.Emit(writerTypeInfo.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, writerType);
 
 			// XXX tailcall causes slowdowns with large valuetypes
 			//il.Emit(OpCodes.Tailcall);
@@ -135,17 +122,18 @@ namespace NetSerializer
 		}
 
 		/// <summary>
-		/// Create delegate that calls reader either directly, or via a trampoline
+		///     Create delegate that calls reader either directly, or via a trampoline
 		/// </summary>
 		public static Delegate CreateDeserializeDelegate(Type paramType, TypeData data)
 		{
-			Type readerType = data.Type;
+			var readerType = data.Type;
+			var readerTypeInfo = data.TypeInfo;
 
 			if (paramType != readerType && paramType != typeof(object))
 				throw new Exception();
 
-			bool needTypeConv = paramType != readerType;
-			bool needsInstanceParameter = data.ReaderNeedsInstance;
+			var needTypeConv = paramType != readerType;
+			var needsInstanceParameter = data.ReaderNeedsInstance;
 
 			var delegateType = typeof(DeserializeDelegate<>).MakeGenericType(paramType);
 
@@ -157,8 +145,7 @@ namespace NetSerializer
 
 				if (dynamicReader != null)
 					return dynamicReader.CreateDelegate(delegateType);
-				else
-					return Delegate.CreateDelegate(delegateType, data.ReaderMethodInfo);
+				return data.ReaderMethodInfo.CreateDelegate(delegateType);
 			}
 
 			// Create a trampoline
@@ -169,7 +156,7 @@ namespace NetSerializer
 			if (needsInstanceParameter)
 				il.Emit(OpCodes.Ldarg_0);
 
-			if (needTypeConv && readerType.IsValueType)
+			if (needTypeConv && readerTypeInfo.IsValueType)
 			{
 				var local = il.DeclareLocal(readerType);
 
