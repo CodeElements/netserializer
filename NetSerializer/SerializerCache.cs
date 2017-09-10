@@ -5,7 +5,7 @@ using NetSerializer.Extensions;
 namespace NetSerializer
 {
 	/// <summary>
-	///     A non generic serialize cache that offers thread-safe access to the seriallizers
+	///     A non generic serializer cache that offers thread-safe access to the serializers
 	/// </summary>
 	public class SerializerCache
 	{
