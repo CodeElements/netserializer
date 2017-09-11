@@ -52,6 +52,14 @@ namespace NetSerializer
 		/// <summary>
 		///     Initialize NetSerializer
 		/// </summary>
+		/// <param name="rootTypes">The types to be de(serialized)</param>
+		public Serializer(params Type[] rootTypes) : this(rootTypes, new Settings())
+		{
+		}
+
+		/// <summary>
+		///     Initialize NetSerializer
+		/// </summary>
 		/// <param name="rootTypes">Types to be (de)serialized</param>
 		public Serializer(IEnumerable<Type> rootTypes)
 			: this(rootTypes, new Settings())
