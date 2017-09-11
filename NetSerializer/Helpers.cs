@@ -23,7 +23,7 @@ namespace NetSerializer
 			Debug.Assert(type.IsSerializable);
 
 			var fields = type.DeclaredFields
-				.Where(fi => (fi.Attributes & FieldAttributes.NotSerialized) == 0)
+				.Where(fi => (fi.Attributes & FieldAttributes.NotSerialized) == 0 && !fi.IsStatic && !fi.IsLiteral)
 				.OrderBy(f => f.Name, StringComparer.Ordinal);
 
 			if (type.BaseType == null)
