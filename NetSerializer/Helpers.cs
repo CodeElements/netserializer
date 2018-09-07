@@ -20,7 +20,7 @@ namespace NetSerializer
 	{
 		public static IEnumerable<FieldInfo> GetFieldInfos(TypeInfo type)
 		{
-			Debug.Assert(type.IsSerializable);
+			//Debug.Assert(type.IsSerializable);
 
 			var fields = type.DeclaredFields
 				.Where(fi => (fi.Attributes & FieldAttributes.NotSerialized) == 0 && !fi.IsStatic && !fi.IsLiteral)

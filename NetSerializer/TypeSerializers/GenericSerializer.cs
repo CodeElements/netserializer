@@ -20,8 +20,8 @@ namespace NetSerializer.TypeSerializers
 	{
 		public bool Handles(TypeInfo type)
 		{
-			if (!type.IsSerializable)
-				throw new NotSupportedException(string.Format("Type {0} is not marked as Serializable", type.FullName));
+			//if (!type.IsSerializable)
+			//	throw new NotSupportedException(string.Format("Type {0} is not marked as Serializable", type.FullName));
 
 			return true;
 		}
